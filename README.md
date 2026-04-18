@@ -95,16 +95,15 @@ Free-form `WriteFile` calls from within the VI go directly to whichever handle (
 ```
 stdio_labview/
 ├── README.md
-├── build/                                    # Pre-built binaries
-│   ├── lv_dll_runner_32.exe                  #   32-bit runner (for LV 8.2 / 32-bit DLLs)
-│   └── lv_dll_runner_64.exe                  #   64-bit runner (for LV 2026 / 64-bit DLLs)
 └── lib/
-    ├── runner_builder/                       # Runner source
+    ├── lv_dll_runner/                        # Runner source
     │   ├── lv_dll_runner.c                   #   Console host implementation
     │   └── build.bat                         #   Build script (TCC 32 + 64)
     ├── labview/                              # LabVIEW helper VIs and examples
-    │   ├── STD write.vi                      #   Write to stdout/stderr via WriteFile
-    │   ├── Parse Error.vi                    #   Format LabVIEW error cluster to string
+    │   ├── src/                              #   LabVIEW source library
+    │   │   ├── STD write.vi                  #     Write to stdout/stderr via WriteFile
+    │   │   ├── Parse Error.vi                #     Format LabVIEW error cluster to string
+    │   │   └── stdio_labview.lvlib           #     Library definition
     │   ├── builds/                           #   Compiled DLL outputs
     │   │   └── example/                      #     Single DLL containing all example VIs
     │   │       ├── export_lv82/              #       32-bit DLL (example.dll)
