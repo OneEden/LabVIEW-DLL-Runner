@@ -1,184 +1,144 @@
-# LabVIEW Bridge Log
+# stdio_labview
 
-A lightweight TCP bridge that tunnels LabVIEW runtime logs to stdout/stderr, enabling CI systems like Jenkins to capture LabVIEW execution output.
+A lightweight console host that lets LabVIEW-compiled DLLs write to stdout/stderr and return a status code — enabling CI systems like Jenkins to capture LabVIEW execution output and exit codes without a TCP bridge or external process.
 
-## Goals
+## How It Works
 
-LabVIEW is a GUI application that cannot directly output to the console, making it difficult for CI/CD pipelines to monitor LabVIEW task execution in real time. This project solves this with a simple TCP bridging solution:
+LabVIEW is a GUI application with no native console output. This project provides `lv_dll_runner.exe`, a thin console host that:
 
-1. **Real-time log output** — LabVIEW sends logs via DLL, bridge prints to stdout/stderr in real time
-2. **Task lifecycle management** — Detect LabVIEW startup, running, completion, and unexpected exit
-3. **CI integration** — Scripted invocation with exit code propagation, ready for Jenkins Pipeline
+1. Loads a LabVIEW-compiled DLL
+2. Calls an exported function using a standard calling convention
+3. Forwards stdout/stderr written by the VI directly to the console
+4. Propagates the function's return value as the process exit code
+
+CI scripts can invoke `lv_dll_runner.exe` and capture stdout, stderr, and the exit code like any ordinary command-line program.
 
 ## Compatibility
 
 | Item | Support |
 |------|---------|
-| **OS** | Windows XP SP2+, Windows 7/10/11 (32-bit PE, runs on Win10 via WoW64) |
-| **LabVIEW** | 8.2+ (via Call Library Function Node) |
-| **Compiler** | TCC 0.9.27+ (included); also works with MSVC / MinGW |
-| **IPC** | TCP localhost:9500 (Winsock2), no session isolation issues |
+| **OS** | Windows XP SP2+, Windows 7/10/11 |
+| **LabVIEW** | 8.2+ (32-bit), 2026+ (64-bit); any version that exports C-compatible DLLs |
+| **Compiler** | TCC (included); also works with MSVC / MinGW |
 
-## Features
+## Exported Function Convention
 
-### Log Bridge (bridge.exe)
+LabVIEW VIs must export functions using `__cdecl` calling convention. Four signatures are supported, selected at runtime via command-line flags.
 
-- Listens on `127.0.0.1:9500`, supports up to 16 concurrent clients
-- Routes by log level: `INFO:` → stdout, `WARN:` / `ERROR:` → stderr
-- Millisecond timestamps, immediate flush
-- `--stop-on` sentinel mode: auto-exit when specified text is received
+| Mode | Flags | C Signature |
+|------|-------|-------------|
+| Default | _(none)_ | `long __cdecl func(char* msg_buf, long* len)` |
+| Input | `--input <value>` | `long __cdecl func(char* input, char* msg_buf, long* len)` |
+| Output | `--output` | `long __cdecl func(char* msg_buf, char* result_buf, long* len, long* result_len)` |
+| Input + Output | `--input <value> --output` | `long __cdecl func(char* input, char* msg_buf, char* result_buf, long* len, long* result_len)` |
 
-```
-bridge.exe [--port <port>] [--stop-on <sentinel>]
-```
+| Parameter | Direction | Description |
+|-----------|-----------|-------------|
+| `input` | in | String argument passed from `--input` |
+| `msg_buf` | out | Final status message buffer (4096 bytes) |
+| `result_buf` | out | Business result buffer (4096 bytes), printed to stdout |
+| `len` | in/out | `msg_buf` size in; LabVIEW writes actual length back |
+| `result_len` | in/out | `result_buf` size in; LabVIEW writes actual length back |
+| return | — | Exit code: `0` = success, non-zero = error |
 
-### Log DLL (bridge_log.dll)
+In addition to `msg_buf` and `result_buf`, the VI can write freely to stdout and stderr at any time during execution using `kernel32.WriteFile` with the handle obtained from `kernel32.GetStdHandle`.
 
-For LabVIEW or any C program:
-
-```c
-int log_open(const char* endpoint);               // Connect to bridge (built-in retry: 10 × 500ms)
-int log_write(const char* text);                   // Send INFO log
-int log_write_level(const char* text, int level);  // Send with level (LOG_INFO/LOG_WARN/LOG_ERROR)
-int log_close(void);                               // Disconnect
-```
-
-| Return | Constant | Meaning |
-|--------|----------|--------|
-| 0 | `LOG_OK` | Success |
-| -1 | `LOG_ERR_INIT` | Winsock init failed |
-| -2 | `LOG_ERR_CONN` | Connection failed |
-| -3 | `LOG_ERR_WRITE` | Write failed |
-| -4 | `LOG_ERR_PARAM` | Invalid parameter |
-
-### DLL Invoker (call_dll.c)
-
-Generic DLL function caller for invoking `__stdcall void(void)` functions from command line:
+## Usage
 
 ```bat
-call_dll.exe <dll_path> <function_name>
+lv_dll_runner_32.exe <dll_path> <function_name> [--input <value>] [--output]
+lv_dll_runner_64.exe <dll_path> <function_name> [--input <value>] [--output]
 ```
 
-### Process Lifecycle Management (launch_labview.bat)
+- Use `lv_dll_runner_32.exe` for DLLs compiled by 32-bit LabVIEW (e.g. LV 8.2)
+- Use `lv_dll_runner_64.exe` for DLLs compiled by 64-bit LabVIEW (e.g. LV 2026)
+- The runner performs a PE bitness check and reports a clear error on mismatch
 
-Complete LabVIEW launch + monitoring script:
+### Exit Codes
 
-1. Start LabVIEW (non-blocking), poll `tasklist` to confirm process exists
-2. Start bridge in background to capture logs
-3. Continuous polling: detect sentinel arrival (success) or unexpected process exit (failure)
+| Code | Meaning |
+|------|---------|
+| 0 | Success (DLL returned 0) |
+| 1 | Usage error |
+| 2 | `LoadLibrary` failed |
+| 3 | `GetProcAddress` failed |
+| 4 | Bitness mismatch between runner and DLL |
+| N | DLL returned N (non-zero = error) |
 
-| Exit Code | Meaning |
-|-----------|---------|
-| 0 | LabVIEW Task Done received |
-| 1 | LabVIEW startup timeout |
-| 2 | LabVIEW exited without sentinel |
-| 3 | bridge.exe not found |
+## Output Behaviour
 
-## Architecture
+| Buffer | Condition | Destination |
+|--------|-----------|-------------|
+| `result_buf` | always | stdout |
+| `msg_buf` | return == 0 | stdout |
+| `msg_buf` | return != 0 | stderr |
 
-```
-┌─────────────────────────────────────────────┐
-│  launch_labview.bat / jenkins_build.bat      │  ← CI entry point
-│                                              │
-│  1. start LabVIEW.exe  (non-blocking)       │
-│  2. start bridge.exe   (bg, --stop-on)       │
-│  3. poll tasklist to monitor both processes  │
-│  4. return exit code                         │
-└───────────┬──────────────────────┬───────────┘
-            │                      │
-   bridge.exe (TCP :9500)    LabVIEW.exe
-     stdout/stderr ←── TCP ←── bridge_log.dll
-```
+Free-form `WriteFile` calls from within the VI go directly to whichever handle (`STD_OUTPUT_HANDLE` or `STD_ERROR_HANDLE`) the VI uses, independent of the buffers above.
 
 ## File Structure
 
 ```
-stdout_labview/
+stdio_labview/
 ├── README.md
-├── lib/                          # Source code
-│   ├── bridge.c                  #   Bridge server (TCP → stdout/stderr)
-│   ├── bridge_log.h              #   DLL header (for LabVIEW import)
-│   ├── bridge_log.c              #   DLL implementation (TCP client with retry)
-│   └── call_dll.c                #   Generic DLL function invoker
-├── example/                      # Example and test scripts
-│   ├── launch_labview.bat        #   Full lifecycle management (launch + monitor + exit)
-│   ├── jenkins_build.bat         #   Jenkins build simulation
-│   ├── run_bridge.bat            #   Minimal bridge launcher
-│   ├── sim_labview.c             #   Simulated LabVIEW process (sends log sequence)
-│   └── test_client.c             #   Smoke test client
-├── labview/                      # LabVIEW project
-│   ├── test.lvproj               #   LabVIEW project file
-│   ├── test.vi                   #   Example VI (calls bridge_log.dll)
-│   └── My DLL/                   #   Build output
-│       ├── SharedLib.dll         #     Compiled DLL (with Test() function)
-│       └── SharedLib.h           #     C header
-└── tcc/                          # TCC compiler (with supplemental winsock2.h)
+├── build/                                    # Pre-built binaries
+│   ├── lv_dll_runner_32.exe                  #   32-bit runner (for LV 8.2 / 32-bit DLLs)
+│   └── lv_dll_runner_64.exe                  #   64-bit runner (for LV 2026 / 64-bit DLLs)
+└── lib/
+    ├── runner_builder/                       # Runner source
+    │   ├── lv_dll_runner.c                   #   Console host implementation
+    │   └── build.bat                         #   Build script (TCC 32 + 64)
+    ├── labview/                              # LabVIEW helper VIs and examples
+    │   ├── STD write.vi                      #   Write to stdout/stderr via WriteFile
+    │   ├── Parse Error.vi                    #   Format LabVIEW error cluster to string
+    │   └── example/                          #   Example VI projects + compiled DLL outputs
+    │       ├── HelloWorld/                   #     Default mode (no flags)
+    │       ├── CallWithInput/                #     --input mode
+    │       ├── CallWithOutput/               #     --output mode
+    │       ├── CallWithInputAndOutput/       #     --input --output mode
+    │       ├── Event/                        #     Event-driven: free stdout/stderr + status
+    │       └── builds/                       #     Compiled DLL outputs (lv82 + lv2026)
+    │           ├── HelloWorld/
+    │           │   ├── export_lv82/          #       32-bit DLL + test_lv82.bat
+    │           │   └── export_lv2026/        #       64-bit DLL + test_lv2026.bat
+    │           ├── CallWithInput/            #     (same structure)
+    │           ├── CallWithOutput/
+    │           ├── CallWithInputAndOutput/
+    │           └── Event/
+    └── tcc/                                  # Bundled TCC compiler
+        ├── tcc.exe                           #   32-bit compiler
+        └── x86_64-win32-tcc.exe              #   64-bit compiler
 ```
 
-## Building
+## Building the Runner
 
 ```bat
-cd lib
-
-:: bridge.exe
-..\tcc\tcc.exe bridge.c -lws2_32 -o bridge.exe
-
-:: bridge_log.dll
-..\tcc\tcc.exe -shared -DBRIDGE_LOG_EXPORTS bridge_log.c -lws2_32 -o bridge_log.dll
-
-:: call_dll.exe
-..\tcc\tcc.exe call_dll.c -o call_dll.exe
-
-:: Example programs (optional)
-..\tcc\tcc.exe ..\example\test_client.c bridge_log.c -lws2_32 -o test_client.exe
-..\tcc\tcc.exe ..\example\sim_labview.c bridge_log.c -lws2_32 -o sim_labview.exe
+cd lib\runner_builder
+build.bat
 ```
 
-## Testing
-
-### Manual Test
-
-Terminal 1 — Start bridge:
-```bat
-bridge.exe
-```
-
-Terminal 2 — Run test client:
-```bat
-test_client.exe
-```
-
-### Using LabVIEW-Compiled DLL Test
-
-```bat
-bridge.exe --stop-on "LabVIEW Task Done"
-:: In another terminal:
-call_dll.exe "C:\...\My DLL\SharedLib.dll" Test
-```
-
-### Jenkins Scenario Simulation
-
-```bat
-jenkins_build.bat
-```
-
-Simulates full flow: start sim_labview → bridge captures logs → sentinel received → auto-exit
-
-### Full Lifecycle Test
-
-```bat
-launch_labview.bat [path_to_vi]
-```
-
-Launches real LabVIEW, polls process status, returns exit code on sentinel or unexpected exit.
+Output: `..\..\build\lv_dll_runner_32.exe` and `..\..\build\lv_dll_runner_64.exe`
 
 ## LabVIEW Integration
 
-Call `bridge_log.dll` via **Call Library Function Node** in LabVIEW:
+### Exporting a function from a Shared Library build spec
+
+Configure the **Shared Library** build spec parameters to match the desired mode. Example for `--output` mode:
 
 ```
-Initialize:  log_open("")             ← Connect to 127.0.0.1:9500
-Running:     log_write("message")     ← Send log
-Finish:      log_write("LabVIEW Task Done")
-             log_close()
+Function name:  MyFunc
+Parameters:
+  - MessageOut  : C String (Array of char), output, pass by array pointer
+  - ResultOut   : C String (Array of char), output, pass by array pointer
+  - len         : Long (pointer)
+  - lenOfResult : Long (pointer)
+Return type:   Long
+Calling conv:  C (cdecl)
 ```
+
+### Writing to stdout / stderr during execution
+
+Use `kernel32.GetStdHandle` to obtain `STD_OUTPUT_HANDLE` (-10) or `STD_ERROR_HANDLE` (-12), then call `kernel32.WriteFile` to write directly. The helper VI `STD write.vi` wraps this pattern.
+
+### Parsing LabVIEW error clusters
+
+Use `Parse Error.vi` to convert a LabVIEW error cluster into a formatted string suitable for `msg_buf` or a `WriteFile` call.
