@@ -1,9 +1,0 @@
-[test] Runner: Z:\OneDrive\Documents\Workspace\LabVIEW\stdio_labview\lib\labview\example\builds\HelloWorld\..\..\..\..\..\build\lv_dll_runner_32.exe
-[test] DLL:    Z:\OneDrive\Documents\Workspace\LabVIEW\stdio_labview\lib\labview\example\builds\HelloWorld\export_lv82\HelloWorld.dll
-[test] Func:   HelloWorld
-
-HelloWorld.vi finished with no error ()
-
-[test] Exit code: 0
-[test] PASS
-Press any key to continue . . . 
