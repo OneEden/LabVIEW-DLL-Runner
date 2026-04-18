@@ -35,7 +35,7 @@
 #include <windows.h>
 #include <stdio.h>
 
-#define RUNNER_VERSION "1.0.0"
+#define RUNNER_VERSION "1.0.1"
 #define MSG_BUF_SIZE 4096
 
 typedef long (__cdecl *LVFUNC)        (char* msg_buf, long* len);
