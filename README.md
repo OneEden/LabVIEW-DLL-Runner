@@ -138,6 +138,8 @@ TCC is used because it produces 32-bit binaries that link against MSVCRT and run
 
 To use a system-installed TCC instead, download TCC 0.9.27 from [bellard.org/tcc](https://bellard.org/tcc/) or [savannah.gnu.org/releases/tinycc](https://download.savannah.gnu.org/releases/tinycc/) and add it to your `PATH`, then update the paths in `lib/lv_dll_runner/build.bat`.
 
+> **Third-party notice:** The binaries in `lib/tcc/` are [TCC (Tiny C Compiler)](https://bellard.org/tcc/) 0.9.27, licensed under the [GNU Lesser General Public License v2.1](lib/tcc/LICENSE.txt). They are included here **unmodified** (recompiled from the original source only) as a convenience copy, since the upstream TCC repository has been archived. No modifications to TCC source code have been made.
+
 ### Build
 
 ```bat
