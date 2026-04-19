@@ -2,6 +2,14 @@
 
 A lightweight console host that lets LabVIEW-compiled DLLs write to stdout/stderr and return a status code — enabling CI systems like Jenkins to capture LabVIEW execution output and exit codes without a TCP bridge or external process.
 
+## Why This Project
+
+Tools like [G-CLI](https://github.com/G-CLI/) and the official [LabVIEW CLI](https://www.ni.com/docs/en-US/bundle/labview/page/running-vis-from-the-command-line.html) (introduced in LabVIEW 2018) already allow running VIs from the command line. This project exists for situations where those tools fall short:
+
+1. **LabVIEW Runtime only** — Both G-CLI and LabVIEW CLI work by connecting to a running LabVIEW process via VI Server, which means they require the **LabVIEW development environment** to be installed — the Runtime Engine alone is not sufficient ([G-CLI issue #36](https://github.com/JamesMc86/G-CLI/issues/36)). This runner loads a LabVIEW-compiled DLL directly, so it works with the **LabVIEW Runtime Engine** alone and is suitable for deployment machines without a LabVIEW development installation.
+
+2. **Legacy platform support** — G-CLI supports LabVIEW 2015+ and LabVIEW CLI requires LabVIEW 2018+. Neither supports LabVIEW 8.2 and other older versions. This project targets Windows XP SP2+ and LabVIEW 8.2+, providing a consistent command-line interface across modern and legacy platforms — intended as a compatibility solution for engineering environments where upgrading LabVIEW is not an option.
+
 ## How It Works
 
 LabVIEW is a GUI application with no native console output. This project provides `lv_dll_runner.exe`, a thin console host that:
