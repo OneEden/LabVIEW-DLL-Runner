@@ -99,7 +99,7 @@ stdio_labview/
     ├── lv_dll_runner/                        # Runner source
     │   ├── lv_dll_runner.c                   #   Console host implementation
     │   └── build.bat                         #   Build script (TCC 32 + 64)
-    ├── labview/                              # LabVIEW helper VIs and examples
+    ├── vi/                                   # LabVIEW helper VIs and examples
     │   ├── src/                              #   LabVIEW source library
     │   │   ├── STD write.vi                  #     Write to stdout/stderr via WriteFile
     │   │   ├── Parse Error.vi                #     Format LabVIEW error cluster to string
