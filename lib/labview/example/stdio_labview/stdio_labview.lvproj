@@ -55,9 +55,9 @@
             <Property Name="ManagedClassName" Type="Str"></Property>
             <Property Name="ManagedClassNamespace" Type="Str"></Property>
             <Property Name="MathScript" Type="Bool">false</Property>
-            <Property Name="Path[0]" Type="Path">../../builds/example/export_lv82/internal.llb</Property>
-            <Property Name="Path[1]" Type="Path">../../builds/example/export_lv82</Property>
-            <Property Name="Path[2]" Type="Path">../../builds/example/export_lv82/data</Property>
+            <Property Name="Path[0]" Type="Path">../../builds/stdio_labview/export_lv82/internal.llb</Property>
+            <Property Name="Path[1]" Type="Path">../../builds/stdio_labview/export_lv82</Property>
+            <Property Name="Path[2]" Type="Path">../../builds/stdio_labview/export_lv82/data</Property>
             <Property Name="SharedLibraryID" Type="Str">{86AC5779-CA91-4C82-9084-55729A6D0676}</Property>
             <Property Name="SharedLibraryName" Type="Str">example.dll</Property>
             <Property Name="ShowHWConfig" Type="Bool">false</Property>
@@ -299,9 +299,9 @@
             <Property Name="ManagedClassName" Type="Str"></Property>
             <Property Name="ManagedClassNamespace" Type="Str"></Property>
             <Property Name="MathScript" Type="Bool">false</Property>
-            <Property Name="Path[0]" Type="Path">../../builds/example/export_lv2026/internal.llb</Property>
-            <Property Name="Path[1]" Type="Path">../../builds/example/export_lv2026</Property>
-            <Property Name="Path[2]" Type="Path">../../builds/example/export_lv2026/data</Property>
+            <Property Name="Path[0]" Type="Path">../../builds/stdio_labview/export_lv2026/internal.llb</Property>
+            <Property Name="Path[1]" Type="Path">../../builds/stdio_labview/export_lv2026</Property>
+            <Property Name="Path[2]" Type="Path">../../builds/stdio_labview/export_lv2026/data</Property>
             <Property Name="SharedLibraryID" Type="Str">{056752EF-6A1B-4891-999C-20CB3F392DEA}</Property>
             <Property Name="SharedLibraryName" Type="Str">example.dll</Property>
             <Property Name="ShowHWConfig" Type="Bool">false</Property>

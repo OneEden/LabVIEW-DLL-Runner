@@ -1,8 +1,8 @@
 @echo off
 setlocal
 
-set RUNNER=%~dp0..\..\..\build\lv_dll_runner_32.exe
-set DLL=%~dp0..\builds\example\export_lv82\example.dll
+set RUNNER=%~dp0..\..\..\..\build\lv_dll_runner_64.exe
+set DLL=%~dp0..\..\example\builds\stdio_labview\export_lv2026\example.dll
 set PASS=0
 set FAIL=0
 

@@ -104,19 +104,20 @@ stdio_labview/
     │   │   ├── STD write.vi                  #     Write to stdout/stderr via WriteFile
     │   │   ├── Parse Error.vi                #     Format LabVIEW error cluster to string
     │   │   └── stdio_labview.lvlib           #     Library definition
-    │   ├── builds/                           #   Compiled DLL outputs
-    │   │   └── example/                      #     Single DLL containing all example VIs
-    │   │       ├── export_lv82/              #       32-bit DLL (example.dll)
-    │   │       └── export_lv2026/            #       64-bit DLL (example.dll)
     │   ├── example/                          #   Example VI projects (source)
+    │   │   ├── builds/                       #   Compiled DLL outputs
+    │   │   │   └── stdio_labview/            #     Single DLL containing all example VIs
+    │   │   │       ├── export_lv82/          #       32-bit DLL (example.dll)
+    │   │   │       └── export_lv2026/        #       64-bit DLL (example.dll)
     │   │   ├── HelloWorld/                   #     Default mode (no flags)
     │   │   ├── CallWithInput/                #     --input mode
     │   │   ├── CallWithOutput/               #     --output mode
     │   │   ├── CallWithInputAndOutput/       #     --input --output mode
     │   │   └── Event/                        #     Event-driven: free stdout/stderr + status
-    │   └── test/                             #   Test scripts
-    │       ├── test_lv2026.bat               #     Run all 64-bit tests
-    │       └── test_lv82.bat                 #     Run all 32-bit tests
+    │   └── tests/                            #   Test scripts
+    │       └── stdio_labview/                #     stdio_labview test suite
+    │           ├── test_lv2026.bat           #     Run all 64-bit tests
+    │           └── test_lv82.bat             #     Run all 32-bit tests
     └── tcc/                                  # Bundled TCC compiler
         ├── tcc.exe                           #   32-bit compiler
         └── x86_64-win32-tcc.exe              #   64-bit compiler
